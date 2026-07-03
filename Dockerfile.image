@@ -45,8 +45,7 @@ RUN git clone https://github.com/gseth/ControlAltAI-Nodes.git 'ControlAltAI-Node
 RUN git clone https://github.com/giriss/comfy-image-saver.git 'comfy-image-saver' && git -C 'comfy-image-saver' checkout 65e6903eff274a50f8b5cd768f0f96baf37baea1 && rm -rf 'comfy-image-saver/.git'
 RUN git clone https://github.com/MixLabPro/comfyui-mixlab-nodes.git 'comfyui-mixlab-nodes' && git -C 'comfyui-mixlab-nodes' checkout c5392aa23762a440834c056c3e22cf99ccf52703 && rm -rf 'comfyui-mixlab-nodes/.git'
 RUN git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git 'comfyui_controlnet_aux' && git -C 'comfyui_controlnet_aux' checkout e8b689a513c3e6b63edc44066560ca5919c0576e && rm -rf 'comfyui_controlnet_aux/.git'
-RUN git clone https://github.com/jags111/efficiency-nodes-comfyui.git 'efficiency-nodes-comfyui' && git -C 'efficiency-nodes-comfyui' checkout 9d049f8a1ed267fced2b2a314b553c6afc9cdad5
- && rm -rf 'efficiency-nodes-comfyui/.git'
+RUN git clone https://github.com/jags111/efficiency-nodes-comfyui.git 'efficiency-nodes-comfyui' && git -C 'efficiency-nodes-comfyui' checkout 9d049f8a1ed267fced2b2a314b553c6afc9cdad5  && rm -rf 'efficiency-nodes-comfyui/.git'
 RUN git clone https://github.com/BadCafeCode/masquerade-nodes-comfyui.git 'masquerade-nodes-comfyui' && git -C 'masquerade-nodes-comfyui' checkout 432cb4d146a391b387a0cd25ace824328b5b61cf && rm -rf 'masquerade-nodes-comfyui/.git'
 RUN git clone https://github.com/rgthree/rgthree-comfy.git 'rgthree-comfy' && git -C 'rgthree-comfy' checkout 27b4f4cdcf3b127c29d5d8135ac1536ecbd4c383 && rm -rf 'rgthree-comfy/.git'
 RUN git clone https://github.com/WASasquatch/was-node-suite-comfyui.git 'was-node-suite-comfyui' && git -C 'was-node-suite-comfyui' checkout ea935d1044ae5a26efa54ebeb18fe9020af49a45 && rm -rf 'was-node-suite-comfyui/.git'
