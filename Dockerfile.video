@@ -1,0 +1,69 @@
+# adarai SKY video worker , serverless pour les workflows Sky (NSFW studio).
+# Environnement FIGÉ : chaque custom node est clone au commit EXACT du pod video
+# qui marche (snapshot 2026-07-03). AUCUN modèle dans l'image : les modèles vivent sur le
+# network volume RunPod (monte sur /runpod-volume, layout /workspace du pod), vus via
+# extra_model_paths.yaml. Ne JAMAIS passer un node en branche flottante : c'est
+# precisement ce qui casse les pods du vendeur a chaque update.
+FROM runpod/worker-comfyui:5.7.1-base
+
+WORKDIR /comfyui/custom_nodes
+
+RUN git clone https://github.com/M1kep/ComfyLiterals.git 'ComfyLiterals' && git -C 'ComfyLiterals' checkout bdddb08ca82d90d75d97b1d437a652e0284a32ac && rm -rf 'ComfyLiterals/.git'
+RUN git clone https://github.com/evanspearman/ComfyMath.git 'ComfyMath' && git -C 'ComfyMath' checkout c01177221c31b8e5fbc062778fc8254aeb541638 && rm -rf 'ComfyMath/.git'
+RUN git clone https://github.com/pythongosssss/ComfyUI-Custom-Scripts.git 'ComfyUI-Custom-Scripts' && git -C 'ComfyUI-Custom-Scripts' checkout 609f3afaa74b2f88ef9ce8d939626065e3247469 && rm -rf 'ComfyUI-Custom-Scripts/.git'
+RUN git clone https://github.com/AIFSH/ComfyUI-DiffSynth-Studio.git 'ComfyUI-DiffSynth-Studio' && git -C 'ComfyUI-DiffSynth-Studio' checkout 91d0a6bd9efa6a1d4a0b880984e21fe66acf4eb0 && rm -rf 'ComfyUI-DiffSynth-Studio/.git'
+RUN git clone https://github.com/LeonQ8/ComfyUI-Dynamic-Lora-Scheduler.git 'ComfyUI-Dynamic-Lora-Scheduler' && git -C 'ComfyUI-Dynamic-Lora-Scheduler' checkout b5a796bb8c6995129283c3e216aae7fc5e889f2a && rm -rf 'ComfyUI-Dynamic-Lora-Scheduler/.git'
+RUN git clone https://github.com/yolain/ComfyUI-Easy-Use.git 'ComfyUI-Easy-Use' && git -C 'ComfyUI-Easy-Use' checkout 54d080bf6a4f52da287e984f305243c10db097f5 && rm -rf 'ComfyUI-Easy-Use/.git'
+RUN git clone https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git 'ComfyUI-Frame-Interpolation' && git -C 'ComfyUI-Frame-Interpolation' checkout 26545cc2dd95bc3d27f056016300673bdeee78f5 && rm -rf 'ComfyUI-Frame-Interpolation/.git'
+RUN git clone https://github.com/kijai/ComfyUI-GIMM-VFI.git 'ComfyUI-GIMM-VFI' && git -C 'ComfyUI-GIMM-VFI' checkout 4c9a3123762af85e7c796e41737da0b70c75d72d && rm -rf 'ComfyUI-GIMM-VFI/.git'
+RUN git clone https://github.com/ltdrdata/ComfyUI-Impact-Pack.git 'ComfyUI-Impact-Pack' && git -C 'ComfyUI-Impact-Pack' checkout 429d0159ad429e64d2b3916e6e7be9c22d025c3c && rm -rf 'ComfyUI-Impact-Pack/.git'
+RUN git clone https://github.com/lquesada/ComfyUI-Inpaint-CropAndStitch.git 'ComfyUI-Inpaint-CropAndStitch' && git -C 'ComfyUI-Inpaint-CropAndStitch' checkout 3617559bcb9d15ff60b24c6800701402eb2cd478 && rm -rf 'ComfyUI-Inpaint-CropAndStitch/.git'
+RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git 'ComfyUI-KJNodes' && git -C 'ComfyUI-KJNodes' checkout e27a505b3ba6ce42687fe00500deda103d9d6071 && rm -rf 'ComfyUI-KJNodes/.git'
+RUN git clone https://github.com/Lightricks/ComfyUI-LTXVideo.git 'ComfyUI-LTXVideo' && git -C 'ComfyUI-LTXVideo' checkout aceeae9635f6d493f2893ba3c411a1c36031788a && rm -rf 'ComfyUI-LTXVideo/.git'
+RUN git clone https://github.com/kijai/ComfyUI-NativeLooping_testing.git 'ComfyUI-NativeLooping_testing' && git -C 'ComfyUI-NativeLooping_testing' checkout 82fff6130ec00a69907feb4d4023ef24a57f0e7a && rm -rf 'ComfyUI-NativeLooping_testing/.git'
+RUN git clone https://github.com/omar92/ComfyUI-QualityOfLifeSuit_Omar92.git 'ComfyUI-QualityOfLifeSuit_Omar92' && git -C 'ComfyUI-QualityOfLifeSuit_Omar92' checkout 793b6d27e9e501e56aeb630cb502462bc0af9fed && rm -rf 'ComfyUI-QualityOfLifeSuit_Omar92/.git'
+RUN git clone https://github.com/1038lab/ComfyUI-QwenVL.git 'ComfyUI-QwenVL' && git -C 'ComfyUI-QwenVL' checkout fcd1ada87a28f922cb887f779db32429f78a022c && rm -rf 'ComfyUI-QwenVL/.git'
+RUN git clone https://github.com/1038lab/ComfyUI-RMBG.git 'ComfyUI-RMBG' && git -C 'ComfyUI-RMBG' checkout d7402513f23f58db7d56754b02a4f51a148b4941 && rm -rf 'ComfyUI-RMBG/.git'
+RUN git clone https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler.git 'ComfyUI-SeedVR2_VideoUpscaler' && git -C 'ComfyUI-SeedVR2_VideoUpscaler' checkout 4490bd1f482e026674543386bb2a4d176da245b9 && rm -rf 'ComfyUI-SeedVR2_VideoUpscaler/.git'
+RUN git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git 'ComfyUI-VideoHelperSuite' && git -C 'ComfyUI-VideoHelperSuite' checkout 4ee72c065db22c9d96c2427954dc69e7b908444b && rm -rf 'ComfyUI-VideoHelperSuite/.git'
+RUN git clone https://github.com/kijai/ComfyUI-WanAnimatePreprocess.git 'ComfyUI-WanAnimatePreprocess' && git -C 'ComfyUI-WanAnimatePreprocess' checkout 0e0b6a2a555625acf4d4aefb780e27d06937132f && rm -rf 'ComfyUI-WanAnimatePreprocess/.git'
+RUN git clone https://github.com/kijai/ComfyUI-WanVideoWrapper.git 'ComfyUI-WanVideoWrapper' && git -C 'ComfyUI-WanVideoWrapper' checkout 088128b224242e110d3906c6750e9a3a348a659b && rm -rf 'ComfyUI-WanVideoWrapper/.git'
+RUN git clone https://github.com/kijai/ComfyUI-segment-anything-2.git 'ComfyUI-segment-anything-2' && git -C 'ComfyUI-segment-anything-2' checkout 0c35fff5f382803e2310103357b5e985f5437f32 && rm -rf 'ComfyUI-segment-anything-2/.git'
+RUN git clone https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes.git 'ComfyUI_Comfyroll_CustomNodes' && git -C 'ComfyUI_Comfyroll_CustomNodes' checkout d78b780ae43fcf8c6b7c6505e6ffb4584281ceca && rm -rf 'ComfyUI_Comfyroll_CustomNodes/.git'
+RUN git clone https://github.com/filliptm/ComfyUI_Fill-Nodes.git 'ComfyUI_Fill-Nodes' && git -C 'ComfyUI_Fill-Nodes' checkout d2453f02a1b8a03570e9855af8f5796fa40ea7d9 && rm -rf 'ComfyUI_Fill-Nodes/.git'
+RUN git clone https://github.com/chflame163/ComfyUI_LayerStyle.git 'ComfyUI_LayerStyle' && git -C 'ComfyUI_LayerStyle' checkout d94bef1ee5ed3656f5ff1bb2830a4ffd94f40935 && rm -rf 'ComfyUI_LayerStyle/.git'
+RUN git clone https://github.com/IuvenisSapiens/ComfyUI_Qwen3-VL-Instruct.git 'ComfyUI_Qwen3-VL-Instruct' && git -C 'ComfyUI_Qwen3-VL-Instruct' checkout 70cc35edacfd5979cbe7a15caf56bd2f715bc3b5 && rm -rf 'ComfyUI_Qwen3-VL-Instruct/.git'
+RUN git clone https://github.com/smthemex/ComfyUI_SparkVSR_SM.git 'ComfyUI_SparkVSR_SM' && git -C 'ComfyUI_SparkVSR_SM' checkout 30f3378e5ddc172b85c3d8776a02e808f7694c28 && rm -rf 'ComfyUI_SparkVSR_SM/.git'
+RUN git clone https://github.com/aining2022/ComfyUI_Swwan.git 'ComfyUI_Swwan' && git -C 'ComfyUI_Swwan' checkout 9c683a7287989661d16903d7b9c13a382f6ce804 && rm -rf 'ComfyUI_Swwan/.git'
+RUN git clone https://github.com/cubiq/ComfyUI_essentials.git 'ComfyUI_essentials' && git -C 'ComfyUI_essentials' checkout 9d9f4bedfc9f0321c19faf71855e228c93bd0dc9 && rm -rf 'ComfyUI_essentials/.git'
+RUN git clone https://github.com/TTPlanetPig/Comfyui_TTP_Toolset.git 'Comfyui_TTP_Toolset' && git -C 'Comfyui_TTP_Toolset' checkout 981ae4020e7ae103b913f004e51653a3483003f4 && rm -rf 'Comfyui_TTP_Toolset/.git'
+RUN git clone https://github.com/Pirog17000/Pirogs-Nodes.git 'Pirogs-Nodes' && git -C 'Pirogs-Nodes' checkout 7ac589ef47f970bf6caf7a54f79ddba4c3d90077 && rm -rf 'Pirogs-Nodes/.git'
+RUN git clone https://github.com/ashtar1984/comfyui-find-perfect-resolution.git 'comfyui-find-perfect-resolution' && git -C 'comfyui-find-perfect-resolution' checkout b8ee6c1872e796329bffbcbf53a5207aaf964bdb && rm -rf 'comfyui-find-perfect-resolution/.git'
+RUN git clone https://github.com/MixLabPro/comfyui-mixlab-nodes.git 'comfyui-mixlab-nodes' && git -C 'comfyui-mixlab-nodes' checkout c5392aa23762a440834c056c3e22cf99ccf52703 && rm -rf 'comfyui-mixlab-nodes/.git'
+RUN git clone https://github.com/jamesWalker55/comfyui-various.git 'comfyui-various' && git -C 'comfyui-various' checkout 5bd85aaf7616878471469c4ec7e11bbd0cef3bf2 && rm -rf 'comfyui-various/.git'
+RUN git clone https://github.com/YaserJaradeh/comfyui-yaser-nodes.git 'comfyui-yaser-nodes' && git -C 'comfyui-yaser-nodes' checkout 68225852a11e22e735631aa11ea065e82ea191d4 && rm -rf 'comfyui-yaser-nodes/.git'
+RUN git clone https://github.com/BadCafeCode/masquerade-nodes-comfyui.git 'masquerade-nodes-comfyui' && git -C 'masquerade-nodes-comfyui' checkout 432cb4d146a391b387a0cd25ace824328b5b61cf && rm -rf 'masquerade-nodes-comfyui/.git'
+RUN git clone https://github.com/rgthree/rgthree-comfy.git 'rgthree-comfy' && git -C 'rgthree-comfy' checkout 27b4f4cdcf3b127c29d5d8135ac1536ecbd4c383 && rm -rf 'rgthree-comfy/.git'
+RUN git clone https://github.com/WASasquatch/was-node-suite-comfyui.git 'was-node-suite-comfyui' && git -C 'was-node-suite-comfyui' checkout ea935d1044ae5a26efa54ebeb18fe9020af49a45 && rm -rf 'was-node-suite-comfyui/.git'
+
+# Deps python des nodes, en protegeant le stack CUDA/torch de la base (pattern
+# eprouve sur adarai-wananimate) : on retire torch/xformers/numpy/onnxruntime des
+# requirements avant install, best-effort pour ne pas rater le build sur un node.
+RUN for d in */ ; do \
+      d="${d%/}"; \
+      if [ -f "$d/requirements.txt" ]; then \
+        grep -ivE '^[[:space:]]*(torch|torchvision|torchaudio|xformers|numpy|onnxruntime|onnxruntime-gpu)([=<>!~ ]|$)' "$d/requirements.txt" > /tmp/req.txt 2>/dev/null || cp "$d/requirements.txt" /tmp/req.txt; \
+        pip install --no-cache-dir -r /tmp/req.txt || echo "warn: deps $d"; \
+      fi; \
+    done
+RUN pip install --no-cache-dir onnxruntime-gpu || pip install --no-cache-dir onnxruntime || echo "warn: onnxruntime"
+
+
+# Modeles + caches sur le network volume (partages entre workers, zero re-download)
+COPY extra_model_paths.yaml /comfyui/extra_model_paths.yaml
+ENV HF_HOME=/runpod-volume/.cache/huggingface \
+    TORCH_HOME=/runpod-volume/.cache/torch \
+    COMFYUI_MODEL_PATH=/runpod-volume/ComfyUI/models
+
+WORKDIR /comfyui
+
