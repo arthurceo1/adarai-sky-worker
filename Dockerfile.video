@@ -66,6 +66,13 @@ ENV HF_HOME=/runpod-volume/.cache/huggingface \
     COMFYUI_MODEL_PATH=/runpod-volume/ComfyUI/models
 
 WORKDIR /comfyui
+# Torch ALIGNE SUR LES PODS DU VENDEUR : 2.8.0 cu128 (compatible RTX 5090 /
+# RTX Pro 4500 Blackwell, les seuls GPU largement dispo dans EU-RO-1 ou vivent
+# les network volumes). Le torch de la base worker-comfyui est plus vieux et ne
+# demarre pas sur Blackwell (jobs bloques en THROTTLED/queue). Installe APRES les
+# deps des nodes pour que rien ne le re-ecrase.
+RUN pip install --no-cache-dir --upgrade --index-url https://download.pytorch.org/whl/cu128 torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0
+
 # Validation AU BUILD : importe tous les custom nodes et démarre ComfyUI en mode
 # test CI (CPU). Un node qui crashe le serveur fait échouer le BUILD avec le log
 # exact, au lieu d'un "ComfyUI not reachable" muet au runtime. Ça déclenche aussi
