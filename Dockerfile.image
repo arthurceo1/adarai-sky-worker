@@ -92,6 +92,9 @@ RUN f=$(find / -maxdepth 3 -name "handler.py" 2>/dev/null | head -1) && \
     sed -i 's/COMFY_API_AVAILABLE_MAX_RETRIES = 500/COMFY_API_AVAILABLE_MAX_RETRIES = 6000/; s/COMFY_API_AVAILABLE_INTERVAL_MS = 50/COMFY_API_AVAILABLE_INTERVAL_MS = 100/' "$f" && \
     grep -n "COMFY_API_AVAILABLE" "$f" | head -2
 
+# SageAttention (accelerateur d'attention utilise par les workflows Wan des pods).
+RUN pip install --no-cache-dir sageattention || echo "warn: sageattention"
+
 # Validation AU BUILD : importe tous les custom nodes et démarre ComfyUI en mode
 # test CI (CPU). Un node qui crashe le serveur fait échouer le BUILD avec le log
 # exact, au lieu d'un "ComfyUI not reachable" muet au runtime. Ça déclenche aussi
