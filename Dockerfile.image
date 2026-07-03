@@ -77,4 +77,8 @@ ENV HF_HOME=/runpod-volume/.cache/huggingface \
     COMFYUI_MODEL_PATH=/runpod-volume/ComfyUI/models
 
 WORKDIR /comfyui
-
+# Validation AU BUILD : importe tous les custom nodes et démarre ComfyUI en mode
+# test CI (CPU). Un node qui crashe le serveur fait échouer le BUILD avec le log
+# exact, au lieu d'un "ComfyUI not reachable" muet au runtime. Ça déclenche aussi
+# le provisioning SAM3/pixi pendant le build (fini les cold starts interminables).
+RUN cd /comfyui && python main.py --quick-test-for-ci --cpu
