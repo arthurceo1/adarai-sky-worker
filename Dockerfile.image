@@ -6,6 +6,14 @@
 # precisement ce qui casse les pods du vendeur a chaque update.
 FROM runpod/worker-comfyui:5.7.1-base
 
+# Update ComfyUI itself to a recent release: the Face Swap workflow uses FLUX-2
+# Klein (CLIPLoader type "flux2" + nvfp4 precision), which the base image's older
+# ComfyUI doesn't know ("Node CLIPLoader: 'nvfp4'"). The manual pods run a recent
+# ComfyUI, so we match it. Torch is already 2.8+cu128 (installed below), so the
+# new ComfyUI's deps line up.
+RUN cd /comfyui && git fetch --depth 1 origin master && git checkout -f FETCH_HEAD \
+ && pip install --no-cache-dir -r requirements.txt || echo "warn: comfyui update"
+
 WORKDIR /comfyui/custom_nodes
 
 RUN git clone https://github.com/ClownsharkBatwing/RES4LYF.git '00_RES4LYF' && git -C '00_RES4LYF' checkout 419de2d7c78f415dde9aa352a7231820ebfc17a4 && rm -rf '00_RES4LYF/.git'
