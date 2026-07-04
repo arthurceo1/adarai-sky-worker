@@ -6,13 +6,14 @@
 # precisement ce qui casse les pods du vendeur a chaque update.
 FROM runpod/worker-comfyui:5.7.1-base
 
-# Update ComfyUI itself to a recent release: the Face Swap workflow uses FLUX-2
-# Klein (CLIPLoader type "flux2" + nvfp4 precision), which the base image's older
-# ComfyUI doesn't know ("Node CLIPLoader: 'nvfp4'"). The manual pods run a recent
-# ComfyUI, so we match it. Torch is already 2.8+cu128 (installed below), so the
-# new ComfyUI's deps line up.
-RUN cd /comfyui && git fetch --depth 1 origin master && git checkout -f FETCH_HEAD \
- && pip install --no-cache-dir -r requirements.txt || echo "warn: comfyui update"
+# Pin ComfyUI to the EXACT version the manual image pod runs (v0.27.0): the Face
+# Swap / FLUX-2 workflows use CLIPLoader type "flux2" + nvfp4 precision, and only
+# match on that version ("Node CLIPLoader: 'nvfp4'" on older/newer). "master" is a
+# moving target that reintroduced the mismatch, so we pin the tag. Torch is already
+# 2.8+cu128 (installed below), so v0.27.0's deps line up.
+RUN cd /comfyui && git fetch --depth 1 origin refs/tags/v0.27.0:refs/tags/v0.27.0 \
+ && git checkout -f v0.27.0 \
+ && pip install --no-cache-dir -r requirements.txt || echo "warn: comfyui pin v0.27.0"
 
 WORKDIR /comfyui/custom_nodes
 
