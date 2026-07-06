@@ -6,6 +6,17 @@
 # precisement ce qui casse les pods du vendeur a chaque update.
 FROM runpod/worker-comfyui:5.7.1-base
 
+# Pin ComfyUI to the EXACT version the manual video pod runs (v0.27.0), same as
+# Dockerfile.image. The v5 Wan SCAIL pipeline (WanSCAILToVideo, SAM3_VideoTrack,
+# SCAIL2ColoredMask, ColorTransfer, ComfyMathExpression, ResizeImageMaskNode,
+# BatchImagesNode…) are CORE nodes that only exist in ComfyUI >= 0.27; the
+# worker-comfyui base ships older, so the serverless worker was missing them
+# (validated live against the pod). Torch is 2.8+cu128 (installed below), so
+# v0.27.0's deps line up.
+RUN cd /comfyui && git fetch --depth 1 origin refs/tags/v0.27.0:refs/tags/v0.27.0 \
+ && git checkout -f v0.27.0 \
+ && pip install --no-cache-dir -r requirements.txt || echo "warn: comfyui pin v0.27.0"
+
 WORKDIR /comfyui/custom_nodes
 
 RUN git clone https://github.com/M1kep/ComfyLiterals.git 'ComfyLiterals' && git -C 'ComfyLiterals' checkout bdddb08ca82d90d75d97b1d437a652e0284a32ac && rm -rf 'ComfyLiterals/.git'
