@@ -29,6 +29,11 @@ RUN git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git 'Comfy
 RUN git clone https://github.com/kijai/ComfyUI-WanAnimatePreprocess.git 'ComfyUI-WanAnimatePreprocess' && git -C 'ComfyUI-WanAnimatePreprocess' checkout 0e0b6a2a555625acf4d4aefb780e27d06937132f && rm -rf 'ComfyUI-WanAnimatePreprocess/.git'
 RUN git clone https://github.com/kijai/ComfyUI-WanVideoWrapper.git 'ComfyUI-WanVideoWrapper' && git -C 'ComfyUI-WanVideoWrapper' checkout 088128b224242e110d3906c6750e9a3a348a659b && rm -rf 'ComfyUI-WanVideoWrapper/.git'
 RUN git clone https://github.com/kijai/ComfyUI-segment-anything-2.git 'ComfyUI-segment-anything-2' && git -C 'ComfyUI-segment-anything-2' checkout 0c35fff5f382803e2310103357b5e985f5437f32 && rm -rf 'ComfyUI-segment-anything-2/.git'
+# comfyui_controlnet_aux : fournit DWPreprocessor (detection de pose DWPose) utilise
+# par le workflow Wan Animate (motion-control). Manquait ici alors que les autres
+# nodes Wan Animate (WanVideoWrapper AnimateEmbeds, WanAnimatePreprocess, SAM2) sont
+# deja presents. Meme pack que l'ancien worker adarai-wananimate (config prouvee).
+RUN git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git 'comfyui_controlnet_aux' && git -C 'comfyui_controlnet_aux' checkout e8b689a513c3e6b63edc44066560ca5919c0576e && rm -rf 'comfyui_controlnet_aux/.git'
 RUN git clone https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes.git 'ComfyUI_Comfyroll_CustomNodes' && git -C 'ComfyUI_Comfyroll_CustomNodes' checkout d78b780ae43fcf8c6b7c6505e6ffb4584281ceca && rm -rf 'ComfyUI_Comfyroll_CustomNodes/.git'
 RUN git clone https://github.com/filliptm/ComfyUI_Fill-Nodes.git 'ComfyUI_Fill-Nodes' && git -C 'ComfyUI_Fill-Nodes' checkout d2453f02a1b8a03570e9855af8f5796fa40ea7d9 && rm -rf 'ComfyUI_Fill-Nodes/.git'
 RUN git clone https://github.com/chflame163/ComfyUI_LayerStyle.git 'ComfyUI_LayerStyle' && git -C 'ComfyUI_LayerStyle' checkout d94bef1ee5ed3656f5ff1bb2830a4ffd94f40935 && rm -rf 'ComfyUI_LayerStyle/.git'
