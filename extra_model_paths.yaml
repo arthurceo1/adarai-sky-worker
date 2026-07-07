@@ -23,3 +23,7 @@ runpod_volume:
   LLM: models/LLM
   llm_gguf: models/llm_gguf
   rife: models/rife
+  # SeedVR2 (Divide & Conquer upscale): the pack looks up the "seedvr2" folder
+  # type; without this line the serverless worker can't see the models that
+  # already live on the volume (pods see them directly via /workspace/ComfyUI).
+  seedvr2: models/SEEDVR2
