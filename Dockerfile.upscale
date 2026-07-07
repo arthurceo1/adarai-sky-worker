@@ -1,0 +1,15 @@
+# adarai SKY UPSCALE worker — a thin layer on the image worker for the DEDICATED
+# 4K-upscale endpoint. Same ComfyUI + nodes + models (Divide & Conquer / SeedVR2);
+# the only difference is it UPLOADS results to R2 instead of returning base64, so a
+# true-4K image (>20MB, which RunPod silently drops from the inline response) comes
+# back as a short s3_url that our poller already handles. Isolated from the main
+# image endpoint on purpose: faceswap/qwen there keep their fast base64 path.
+FROM ghcr.io/arthurceo1/adarai-sky-image:latest
+
+# worker-comfyui uploads to S3 when BUCKET_ENDPOINT_URL is set, via
+# rp_upload.upload_image(job_id, path) — which defaults to a MONTH-YEAR bucket
+# ("07-26") that would silently break every 1st of the month. Pin it to a FIXED
+# bucket from BUCKET_NAME so uploads never expire.
+RUN f=$(find / -maxdepth 5 -name "handler.py" 2>/dev/null | head -1) && \
+    sed -i 's#rp_upload\.upload_image(job_id, temp_file_path)#rp_upload.upload_image(job_id, temp_file_path, bucket_name=os.environ.get("BUCKET_NAME", "adarai-upscale"))#' "$f" && \
+    grep -n "upload_image(job_id" "$f"
