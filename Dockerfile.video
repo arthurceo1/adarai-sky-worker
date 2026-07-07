@@ -6,6 +6,16 @@
 # precisement ce qui casse les pods du vendeur a chaque update.
 FROM runpod/worker-comfyui:5.7.1-base
 
+# SageAttention (installed below, used by every Wan video graph) JIT-compiles its
+# CUDA kernels through Triton at runtime, which needs a C compiler. The slim base
+# image has none, so sampling died with "Failed to find C compiler" after ~90s of
+# GPU time on EVERY Wan video (the manual pod worked because its devel base ships
+# gcc — the classic works-on-pod, fails-on-serverless gap). Install the toolchain
+# and point Triton at it.
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
+ && rm -rf /var/lib/apt/lists/*
+ENV CC=gcc CXX=g++
+
 # Pin ComfyUI to the EXACT version the manual video pod runs (v0.27.0), same as
 # Dockerfile.image. The v5 Wan SCAIL pipeline (WanSCAILToVideo, SAM3_VideoTrack,
 # SCAIL2ColoredMask, ColorTransfer, ComfyMathExpression, ResizeImageMaskNode,
