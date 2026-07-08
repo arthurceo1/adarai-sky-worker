@@ -129,6 +129,24 @@ RUN f=$(find / -maxdepth 3 -name "handler.py" 2>/dev/null | head -1) && \
     sed -i 's/COMFY_API_AVAILABLE_MAX_RETRIES = 500/COMFY_API_AVAILABLE_MAX_RETRIES = 6000/; s/COMFY_API_AVAILABLE_INTERVAL_MS = 50/COMFY_API_AVAILABLE_INTERVAL_MS = 100/' "$f" && \
     grep -n "COMFY_API_AVAILABLE" "$f" | head -2
 
+# libcuda runtime-symlink fix (see libcuda_fix.py for full rationale). Triton
+# JIT-compiles a CUDA launcher stub at first call (SageAttention's Triton
+# kernels, used by PathchSageAttentionKJ whenever sage_attention != "disabled").
+# gcc's `-lcuda` needs an UNVERSIONED libcuda.so next to the driver-mounted
+# libcuda.so.1 -- RunPod's container runtime only bind-mounts the real,
+# versioned libcuda.so.1 once this container is scheduled onto a live GPU
+# worker, so this can only be fixed at real container start, never at
+# `docker build` (no GPU/driver exists then). Reuse the exact handler.py
+# discovery already proven above (same file RunPod actually executes) and
+# prepend the fix so it runs before ComfyUI/torch/Triton do anything.
+# INERT while sage_attention stays "disabled" in every deployed graph: Triton
+# is never invoked, so this code path is never exercised.
+COPY libcuda_fix.py /opt/libcuda_fix.py
+RUN f=$(find / -maxdepth 3 -name "handler.py" 2>/dev/null | head -1) && \
+    cat /opt/libcuda_fix.py "$f" > /tmp/handler_patched.py && \
+    mv /tmp/handler_patched.py "$f" && \
+    echo "patched libcuda fix into: $f" && head -20 "$f"
+
 # SageAttention (accelerateur d'attention utilise par les workflows Wan des pods).
 RUN pip install --no-cache-dir sageattention || echo "warn: sageattention"
 
