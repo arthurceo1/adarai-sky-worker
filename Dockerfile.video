@@ -4,7 +4,21 @@
 # network volume RunPod (monte sur /runpod-volume, layout /workspace du pod), vus via
 # extra_model_paths.yaml. Ne JAMAIS passer un node en branche flottante : c'est
 # precisement ce qui casse les pods du vendeur a chaque update.
-FROM runpod/worker-comfyui:5.7.1-base
+#
+# Base bumped 5.7.1 -> 5.8.6 (2026-07-08): 5.7.1 predates worker-comfyui PR #197
+# (shipped 5.8.3), which fixed exactly the "ComfyUI server not reachable after
+# multiple retries" / "WebSocket... unreachable during reconnect" symptom our
+# Wan/SeedVR2 jobs were hitting mid-run. Pre-197, when ComfyUI's process dies for
+# ANY reason (OOM, CUDA fault, dependency crash), the handler silently polls a
+# dead server for its retry budget before returning that ambiguous error; 197
+# adds a PID-liveness check so a dead ComfyUI fails IMMEDIATELY with an explicit
+# "ComfyUI process has exited" message instead. This doesn't fix whatever kills
+# ComfyUI (still under investigation — leading hypothesis: VRAM exhaustion on
+# Wan2.1-14B native-attention sampling at our above-480p resolutions, worse on
+# the 32GB RTX 5090 than the 80GB A100 variants in this endpoint's GPU pool),
+# but turns the next crash into a diagnosable signal instead of noise.
+# -cuda12.8.1 variant matches the torch 2.8.0+cu128 install below.
+FROM runpod/worker-comfyui:5.8.6-base-cuda12.8.1
 
 # SageAttention (installed below, used by every Wan video graph) JIT-compiles its
 # CUDA kernels through Triton at runtime, which needs a C compiler. The slim base
@@ -89,7 +103,15 @@ RUN pip install --no-cache-dir onnxruntime-gpu || pip install --no-cache-dir onn
 COPY extra_model_paths.yaml /comfyui/extra_model_paths.yaml
 ENV HF_HOME=/runpod-volume/.cache/huggingface \
     TORCH_HOME=/runpod-volume/.cache/torch \
-    COMFYUI_MODEL_PATH=/runpod-volume/ComfyUI/models
+    COMFYUI_MODEL_PATH=/runpod-volume/ComfyUI/models \
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+    REFRESH_WORKER=true
+# expandable_segments reduces allocator fragmentation (no tuning existed before
+# 2026-07-08) — cheap margin against the same VRAM-exhaustion hypothesis above.
+# REFRESH_WORKER restarts the pod after every job so a crash never leaves the
+# next job on a worker with fragmented/leaked VRAM or a zombie ComfyUI process;
+# costs a cold start per job (loses some flashboot benefit) in exchange for
+# not letting one bad job take down several more silently.
 
 WORKDIR /comfyui
 # Torch ALIGNE SUR LES PODS DU VENDEUR : 2.8.0 cu128 (compatible RTX 5090 /
