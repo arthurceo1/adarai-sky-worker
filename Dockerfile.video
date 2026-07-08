@@ -26,8 +26,27 @@ FROM runpod/worker-comfyui:5.8.6-base-cuda12.8.1
 # GPU time on EVERY Wan video (the manual pod worked because its devel base ships
 # gcc — the classic works-on-pod, fails-on-serverless gap). Install the toolchain
 # and point Triton at it.
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
- && rm -rf /var/lib/apt/lists/*
+# python3-dev: Triton's JIT-compiled launcher stub is a CPython extension
+# (#include <Python.h>, see the -I/usr/include/python3.12 in its gcc call);
+# build-essential does NOT pull the Python headers, so without this package
+# gcc dies at COMPILE time ("Python.h: No such file or directory") before the
+# -lcuda link step is even reached -- an error subprocess reports as the same
+# opaque "returned non-zero exit status 1" as a link failure. Both this AND
+# the libcuda symlink (libcuda_fix.py below) are required for SageAttention.
+# The venv runs Python 3.12; if the distro's python3-dev targets another
+# minor version, locate the real Python.h and symlink it to the exact
+# include path this venv's sysconfig reports (= the -I path Triton will use).
+# The final `ls` makes the BUILD fail loudly if Python.h still can't be
+# resolved, instead of burning GPU time to rediscover it at runtime.
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential python3-dev \
+ && (apt-get install -y --no-install-recommends python3.12-dev || echo "warn: python3.12-dev unavailable") \
+ && rm -rf /var/lib/apt/lists/* \
+ && inc=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])") \
+ && if [ ! -f "$inc/Python.h" ]; then \
+      real=$(find /usr/local/include /usr/include -name Python.h -path "*python3*" 2>/dev/null | head -1); \
+      if [ -n "$real" ]; then mkdir -p "$(dirname "$inc")" && ln -sfn "$(dirname "$real")" "$inc"; fi; \
+    fi \
+ && ls -la "$inc/Python.h" && echo "Python.h OK at $inc"
 ENV CC=gcc CXX=g++
 
 # Pin ComfyUI to the EXACT version the manual video pod runs (v0.27.0), same as
