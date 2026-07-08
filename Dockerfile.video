@@ -147,6 +147,19 @@ RUN f=$(find / -maxdepth 3 -name "handler.py" 2>/dev/null | head -1) && \
     mv /tmp/handler_patched.py "$f" && \
     echo "patched libcuda fix into: $f" && head -20 "$f"
 
+# The handler.py prepend above only fixes handler.py's OWN process. ComfyUI
+# (main.py) runs as a SEPARATE process started by this image's entrypoint --
+# confirmed live 2026-07-08: the handler-side symlink+TRITON_LIBCUDA_PATH did
+# NOT change gcc's actual -L flags on the next crash, meaning the fix never
+# reached the process that actually runs Triton. `sitecustomize.py` is a
+# Python stdlib convention: ANY file named exactly that on site-packages is
+# auto-imported at interpreter startup for EVERY process using that Python
+# install -- unlike prepending to one specific entry file, this reaches both
+# handler.py AND ComfyUI's main.py since they share the same /opt/venv.
+RUN python3 -c "import site; print(site.getsitepackages()[0])" > /tmp/sitepkgs.txt && \
+    cp /opt/libcuda_fix.py "$(cat /tmp/sitepkgs.txt)/sitecustomize.py" && \
+    echo "installed sitecustomize.py in: $(cat /tmp/sitepkgs.txt)"
+
 # SageAttention (accelerateur d'attention utilise par les workflows Wan des pods).
 RUN pip install --no-cache-dir sageattention || echo "warn: sageattention"
 
