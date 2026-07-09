@@ -1,0 +1,20 @@
+# adarai SKY VIDEO UPSCALE worker — a thin layer on the video worker for a
+# DEDICATED video-upscale endpoint. Same ComfyUI + nodes + models (SeedVR2); the
+# only difference is it UPLOADS results to R2 instead of returning base64, so an
+# upscaled clip (potentially >20MB, which RunPod silently drops from the inline
+# response) comes back as a short s3_url that our poller already handles — same
+# pattern as Dockerfile.upscale for the 4K image path. Isolated from the main
+# video endpoint on purpose: the scenario clips + Wan v5 Motion/Character
+# Transfer there keep their fast base64 path (short clips, well under 20MB).
+FROM ghcr.io/arthurceo1/adarai-sky-video:latest
+
+# worker-comfyui uploads to S3 when BUCKET_ENDPOINT_URL is set, via
+# rp_upload.upload_image(job_id, path) — despite the name, it uploads whatever
+# file it's given (video included; ComfyUI's node UI payload reports any
+# previewable output, video or image, under the same "images" key, which is
+# what the handler reads). It defaults to a MONTH-YEAR bucket ("07-26") that
+# would silently break every 1st of the month. Pin it to a FIXED bucket from
+# BUCKET_NAME so uploads never expire — same fix as Dockerfile.upscale.
+RUN f=$(find / -maxdepth 5 -name "handler.py" 2>/dev/null | head -1) && \
+    sed -i 's#rp_upload\.upload_image(job_id, temp_file_path)#rp_upload.upload_image(job_id, temp_file_path, bucket_name=os.environ.get("BUCKET_NAME", "adarai-media"))#' "$f" && \
+    grep -n "upload_image(job_id" "$f"

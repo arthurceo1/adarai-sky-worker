@@ -19,6 +19,8 @@ jobs:
             dockerfile: Dockerfile.video
           - name: adarai-sky-upscale
             dockerfile: Dockerfile.upscale
+          - name: adarai-sky-video-upscale
+            dockerfile: Dockerfile.video-upscale
     steps:
       - uses: actions/checkout@v4
       - name: Free disk space
