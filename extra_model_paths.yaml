@@ -27,3 +27,7 @@ runpod_volume:
   # type; without this line the serverless worker can't see the models that
   # already live on the volume (pods see them directly via /workspace/ComfyUI).
   seedvr2: models/SEEDVR2
+  # ReActor: inswapper/buffalo_l + face-restore weights, so a fresh cold worker
+  # doesn't re-download ~500MB on every scale-up.
+  insightface: models/insightface
+  facerestore_models: models/facerestore_models

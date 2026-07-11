@@ -32,6 +32,10 @@ RUN git clone https://github.com/pollockjj/ComfyUI-MultiGPU.git 'ComfyUI-MultiGP
 RUN git clone https://github.com/PozzettiAndrea/ComfyUI-Multiband.git 'ComfyUI-Multiband' && git -C 'ComfyUI-Multiband' checkout 121606fa1f36c11467f205f348aabc1395bd3de4 && rm -rf 'ComfyUI-Multiband/.git'
 RUN git clone https://github.com/omar92/ComfyUI-QualityOfLifeSuit_Omar92.git 'ComfyUI-QualityOfLifeSuit_Omar92' && git -C 'ComfyUI-QualityOfLifeSuit_Omar92' checkout 793b6d27e9e501e56aeb630cb502462bc0af9fed && rm -rf 'ComfyUI-QualityOfLifeSuit_Omar92/.git'
 RUN git clone https://github.com/1038lab/ComfyUI-QwenVL.git 'ComfyUI-QwenVL' && git -C 'ComfyUI-QwenVL' checkout fcd1ada87a28f922cb887f779db32429f78a022c && rm -rf 'ComfyUI-QwenVL/.git'
+# ReActor (inswapper + codeformer): the deterministic per-frame face swap used by
+# face-onto-frame.json (Motion Control's frame swap). Revived here after the old
+# generic-serverless endpoint it used to run on was deleted on RunPod's side.
+RUN git clone https://github.com/Gourieff/ComfyUI-ReActor.git 'ComfyUI-ReActor' && git -C 'ComfyUI-ReActor' checkout 6ad6b35a4df250d14cb2abf0808c9ffedf59f747 && rm -rf 'ComfyUI-ReActor/.git'
 RUN git clone https://github.com/1038lab/ComfyUI-RMBG.git 'ComfyUI-RMBG' && git -C 'ComfyUI-RMBG' checkout d7402513f23f58db7d56754b02a4f51a148b4941 && rm -rf 'ComfyUI-RMBG/.git'
 RUN git clone https://github.com/PozzettiAndrea/ComfyUI-SAM3.git 'ComfyUI-SAM3' && git -C 'ComfyUI-SAM3' checkout de0ff5d2c2ea435d29f800abfa568cffdfb94773 && rm -rf 'ComfyUI-SAM3/.git'
 RUN git clone https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler.git 'ComfyUI-SeedVR2_VideoUpscaler' && git -C 'ComfyUI-SeedVR2_VideoUpscaler' checkout 4490bd1f482e026674543386bb2a4d176da245b9 && rm -rf 'ComfyUI-SeedVR2_VideoUpscaler/.git'
