@@ -36,6 +36,17 @@ RUN git clone https://github.com/1038lab/ComfyUI-QwenVL.git 'ComfyUI-QwenVL' && 
 # face-onto-frame.json (Motion Control's frame swap). Revived here after the old
 # generic-serverless endpoint it used to run on was deleted on RunPod's side.
 RUN git clone https://github.com/Gourieff/ComfyUI-ReActor.git 'ComfyUI-ReActor' && git -C 'ComfyUI-ReActor' checkout 6ad6b35a4df250d14cb2abf0808c9ffedf59f747 && rm -rf 'ComfyUI-ReActor/.git'
+# ReActor's weights (~700MB total): baked into the image rather than the network
+# volume for now (fastest path to get it working; the volume's S3 API needs a
+# separate S3 API key from the RunPod console, not just the RUNPOD_API_KEY we
+# already have). Revisit -> move to /runpod-volume if the image-size cost bites.
+RUN mkdir -p /comfyui/models/insightface /comfyui/models/facerestore_models \
+ && python3 -c "import urllib.request; urllib.request.urlretrieve('https://huggingface.co/datasets/Gourieff/ReActor/resolve/main/models/inswapper_128.onnx', '/comfyui/models/insightface/inswapper_128.onnx')" \
+ && python3 -c "import urllib.request; urllib.request.urlretrieve('https://huggingface.co/datasets/Gourieff/ReActor/resolve/main/models/buffalo_l.zip', '/tmp/buffalo_l.zip')" \
+ && python3 -c "import zipfile; zipfile.ZipFile('/tmp/buffalo_l.zip').extractall('/comfyui/models/insightface/models/buffalo_l')" \
+ && rm -f /tmp/buffalo_l.zip \
+ && python3 -c "import urllib.request; urllib.request.urlretrieve('https://huggingface.co/datasets/Gourieff/ReActor/resolve/main/models/facerestore_models/codeformer-v0.1.0.pth', '/comfyui/models/facerestore_models/codeformer-v0.1.0.pth')" \
+ && python3 -c "import urllib.request; urllib.request.urlretrieve('https://github.com/xinntao/facexlib/releases/download/v0.1.0/detection_Resnet50_Final.pth', '/comfyui/models/facerestore_models/detection_Resnet50_Final.pth')"
 RUN git clone https://github.com/1038lab/ComfyUI-RMBG.git 'ComfyUI-RMBG' && git -C 'ComfyUI-RMBG' checkout d7402513f23f58db7d56754b02a4f51a148b4941 && rm -rf 'ComfyUI-RMBG/.git'
 RUN git clone https://github.com/PozzettiAndrea/ComfyUI-SAM3.git 'ComfyUI-SAM3' && git -C 'ComfyUI-SAM3' checkout de0ff5d2c2ea435d29f800abfa568cffdfb94773 && rm -rf 'ComfyUI-SAM3/.git'
 RUN git clone https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler.git 'ComfyUI-SeedVR2_VideoUpscaler' && git -C 'ComfyUI-SeedVR2_VideoUpscaler' checkout 4490bd1f482e026674543386bb2a4d176da245b9 && rm -rf 'ComfyUI-SeedVR2_VideoUpscaler/.git'
