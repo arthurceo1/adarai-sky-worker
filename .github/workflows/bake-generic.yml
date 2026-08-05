@@ -51,7 +51,15 @@ jobs:
             URL="${URLS[$i]}"
             [ -z "$URL" ] && continue
             echo "== layer $((i+1)): download =="
-            curl -fSL --retry 3 -o layer.tar "$URL"
+            # Resume-capable download: a multi-GB pull off R2 can drop
+            # mid-stream on a shared runner (curl exit 18 killed the first
+            # video bake); -C - resumes, --retry-all-errors covers the cases
+            # plain --retry skips.
+            for attempt in 1 2 3 4 5; do
+              curl -fSL --retry 3 --retry-all-errors -C - -o layer.tar "$URL" && break
+              echo "download attempt $attempt failed, retrying with resume..."
+              sleep 10
+            done
             ls -la layer.tar
             if [ "$i" = "$LAST" ]; then TARGET="$OWNER_IMAGE:${{ inputs.tag }}"; else TARGET="$OWNER_IMAGE:bake-stage-$((i+1))"; fi
             echo "== layer $((i+1)): append -> $TARGET =="
