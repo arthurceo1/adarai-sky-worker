@@ -1,0 +1,63 @@
+# Generalized layer-append bake (see bake-image.yml's header for the full why):
+# appends up to 6 R2-staged model tarballs onto ANY of this repo's worker
+# images, registry-side via crane. Phase 2 needs it for adarai-sky-video and a
+# second pass on adarai-sky-image; keeping bake-image.yml untouched as the
+# proven original.
+name: bake-models-generic
+on:
+  workflow_dispatch:
+    inputs:
+      image_repo:
+        description: "Image name under ghcr.io/<owner>/ (e.g. adarai-sky-video)"
+        required: true
+      base:
+        description: "Base image ref (the CURRENT prod tag)"
+        required: true
+      tag:
+        description: "Tag for the fat image"
+        required: true
+      url1: { description: "presigned tar 1", required: false, default: "" }
+      url2: { description: "presigned tar 2", required: false, default: "" }
+      url3: { description: "presigned tar 3", required: false, default: "" }
+      url4: { description: "presigned tar 4", required: false, default: "" }
+      url5: { description: "presigned tar 5", required: false, default: "" }
+      url6: { description: "presigned tar 6", required: false, default: "" }
+permissions:
+  contents: read
+  packages: write
+jobs:
+  bake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install crane
+        run: |
+          curl -fsSL https://github.com/google/go-containerregistry/releases/download/v0.20.2/go-containerregistry_Linux_x86_64.tar.gz \
+            | tar -xz crane && sudo mv crane /usr/local/bin/
+      - name: Login GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Append layers sequentially
+        run: |
+          set -euo pipefail
+          CUR="${{ inputs.base }}"
+          OWNER_IMAGE="ghcr.io/${{ github.repository_owner }}/${{ inputs.image_repo }}"
+          URLS=(
+            "${{ inputs.url1 }}" "${{ inputs.url2 }}" "${{ inputs.url3 }}"
+            "${{ inputs.url4 }}" "${{ inputs.url5 }}" "${{ inputs.url6 }}"
+          )
+          # last non-empty index = the final append, which gets the real tag
+          LAST=0
+          for i in 0 1 2 3 4 5; do [ -n "${URLS[$i]}" ] && LAST=$i; done
+          for i in 0 1 2 3 4 5; do
+            URL="${URLS[$i]}"
+            [ -z "$URL" ] && continue
+            echo "== layer $((i+1)): download =="
+            curl -fSL --retry 3 -o layer.tar "$URL"
+            ls -la layer.tar
+            if [ "$i" = "$LAST" ]; then TARGET="$OWNER_IMAGE:${{ inputs.tag }}"; else TARGET="$OWNER_IMAGE:bake-stage-$((i+1))"; fi
+            echo "== layer $((i+1)): append -> $TARGET =="
+            crane append -b "$CUR" -f layer.tar -t "$TARGET"
+            rm -f layer.tar
+            CUR="$TARGET"
+          done
+          echo "== final manifest =="
+          crane manifest "$OWNER_IMAGE:${{ inputs.tag }}" | head -40
