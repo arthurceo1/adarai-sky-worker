@@ -1,0 +1,63 @@
+# Appends the hot-set model layers onto the existing sky-image worker image —
+# no rebuild, pure registry-side layer surgery via crane. WHY (cost audit
+# 05/08): every cold start reads ~47GB of faceswap-chain models off the
+# network volume, ~7-8 BILLED minutes per boot (~$15-22/week). Baked into the
+# image they load from host-local disk instead. The tarballs are staged in R2
+# by a temporary RunPod pod (the volume is only mountable there); this
+# workflow only assembles and pushes — GitHub runners could never BUILD this
+# image (fat layers exceed runner disk), but appending streams one layer at a
+# time. Rollback = repoint the RunPod template at the previous tag.
+name: bake-models-image
+on:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: "Base image ref (the CURRENT prod tag)"
+        required: true
+        default: "ghcr.io/arthurceo1/adarai-sky-image:299a4db185ee482de6f21f434343801643b10344"
+      tag:
+        description: "Tag for the fat image"
+        required: true
+        default: "fat-manual"
+      url1: { description: "presigned tar l1", required: true }
+      url2: { description: "presigned tar l2", required: true }
+      url3: { description: "presigned tar l3", required: true }
+      url4: { description: "presigned tar l4", required: true }
+      url5: { description: "presigned tar l5", required: true }
+      url6: { description: "presigned tar l6", required: true }
+permissions:
+  contents: read
+  packages: write
+jobs:
+  bake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install crane
+        run: |
+          curl -fsSL https://github.com/google/go-containerregistry/releases/download/v0.20.2/go-containerregistry_Linux_x86_64.tar.gz \
+            | tar -xz crane && sudo mv crane /usr/local/bin/
+      - name: Login GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Append layers sequentially
+        run: |
+          set -euo pipefail
+          CUR="${{ inputs.base }}"
+          OWNER_IMAGE="ghcr.io/${{ github.repository_owner }}/adarai-sky-image"
+          for i in 1 2 3 4 5 6; do
+            URL_VAR="url$i"
+            case "$i" in
+              1) URL="${{ inputs.url1 }}";; 2) URL="${{ inputs.url2 }}";;
+              3) URL="${{ inputs.url3 }}";; 4) URL="${{ inputs.url4 }}";;
+              5) URL="${{ inputs.url5 }}";; 6) URL="${{ inputs.url6 }}";;
+            esac
+            echo "== layer $i: download =="
+            curl -fSL --retry 3 -o layer.tar "$URL"
+            ls -la layer.tar
+            if [ "$i" = "6" ]; then TARGET="$OWNER_IMAGE:${{ inputs.tag }}"; else TARGET="$OWNER_IMAGE:bake-stage-$i"; fi
+            echo "== layer $i: append -> $TARGET =="
+            crane append -b "$CUR" -f layer.tar -t "$TARGET"
+            rm -f layer.tar
+            CUR="$TARGET"
+          done
+          echo "== final manifest =="
+          crane manifest "$OWNER_IMAGE:${{ inputs.tag }}" | head -60
