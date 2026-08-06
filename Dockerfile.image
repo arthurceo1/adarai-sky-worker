@@ -20,7 +20,17 @@ WORKDIR /comfyui/custom_nodes
 RUN git clone https://github.com/ClownsharkBatwing/RES4LYF.git '00_RES4LYF' && git -C '00_RES4LYF' checkout 419de2d7c78f415dde9aa352a7231820ebfc17a4 && rm -rf '00_RES4LYF/.git'
 RUN git clone https://github.com/M1kep/ComfyLiterals.git 'ComfyLiterals' && git -C 'ComfyLiterals' checkout bdddb08ca82d90d75d97b1d437a652e0284a32ac && rm -rf 'ComfyLiterals/.git'
 RUN git clone https://github.com/pythongosssss/ComfyUI-Custom-Scripts.git 'ComfyUI-Custom-Scripts' && git -C 'ComfyUI-Custom-Scripts' checkout 609f3afaa74b2f88ef9ce8d939626065e3247469 && rm -rf 'ComfyUI-Custom-Scripts/.git'
-RUN git clone https://github.com/ussoewwin/ComfyUI-DistorchMemoryManager.git 'ComfyUI-DistorchMemoryManager' && git -C 'ComfyUI-DistorchMemoryManager' checkout 7ce91c59a226d7b7e9f643c873dc0f447d6a33f1 && rm -rf 'ComfyUI-DistorchMemoryManager/.git'
+# Re-epingle le 06/08/2026 : l'amont a REECRIT son historique et le commit
+# 7ce91c59 qui etait epingle ici n'existe plus (git checkout repond "reference is
+# not a tree"). Ce build echouait donc a CHAQUE run depuis le 14/07, toujours sur
+# cette seule image, pendant que bake-models continuait de publier des tags qui
+# ont l'air frais par-dessus la base du 11/07. Consequence en prod : le noeud
+# SkyLoraDownload ecrit le 06/08 n'a jamais atteint un worker, et tous les rendus
+# des creatrices non bakees sont morts a la validation ComfyUI.
+# 43bbc7a1 = v2.4.4 (03/08). Verifie avant de re-epingler : le clone + checkout
+# passent, et DisTorchPurgeVRAMV2 (le seul noeud de ce pack que nos graphes
+# utilisent, dans sky/text2img-zimage.json) existe toujours.
+RUN git clone https://github.com/ussoewwin/ComfyUI-DistorchMemoryManager.git 'ComfyUI-DistorchMemoryManager' && git -C 'ComfyUI-DistorchMemoryManager' checkout 43bbc7a1182fcf6b3314777e82a7ba534c66c0e8 && rm -rf 'ComfyUI-DistorchMemoryManager/.git'
 RUN git clone https://github.com/yolain/ComfyUI-Easy-Use.git 'ComfyUI-Easy-Use' && git -C 'ComfyUI-Easy-Use' checkout 54d080bf6a4f52da287e984f305243c10db097f5 && rm -rf 'ComfyUI-Easy-Use/.git'
 RUN git clone https://github.com/lrzjason/ComfyUI-EditUtils.git 'ComfyUI-EditUtils' && git -C 'ComfyUI-EditUtils' checkout 0d96358ac56edba22e3a53f00d9c27fd5fea76f3 && rm -rf 'ComfyUI-EditUtils/.git'
 RUN git clone https://github.com/ltdrdata/ComfyUI-Impact-Pack.git 'ComfyUI-Impact-Pack' && git -C 'ComfyUI-Impact-Pack' checkout 429d0159ad429e64d2b3916e6e7be9c22d025c3c && rm -rf 'ComfyUI-Impact-Pack/.git'
