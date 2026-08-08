@@ -1,0 +1,66 @@
+# Append ONE remote file to a worker image at an exact in-image path.
+#
+# Why this exists (08/08): bake-generic.yml only takes R2-staged tarballs, and
+# staging a tarball means uploading it from a laptop — a 295MB PUT died on TLS
+# mid-stream. The runner already has the bandwidth and the disk, so it builds
+# the one-file layer itself. Use it whenever a single model file is missing
+# from an image (the 06/08 migration lost the qwen-edit multiple-angles LoRA
+# this way); bake-generic stays the tool for the multi-GB model packs.
+name: bake-file
+on:
+  workflow_dispatch:
+    inputs:
+      image_repo:
+        description: "Image name under ghcr.io/<owner>/ (e.g. adarai-sky-image)"
+        required: true
+      base:
+        description: "Base image ref (the CURRENT known-good tag)"
+        required: true
+      tag:
+        description: "Tag for the new image"
+        required: true
+      file_url:
+        description: "Direct download URL of the file"
+        required: true
+      dest_path:
+        description: "Path INSIDE the image, no leading slash (e.g. comfyui/models/loras/x.safetensors)"
+        required: true
+      sha256:
+        description: "Optional expected sha256 of the downloaded file"
+        required: false
+        default: ""
+permissions:
+  contents: read
+  packages: write
+jobs:
+  bake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install crane
+        run: |
+          curl -fsSL https://github.com/google/go-containerregistry/releases/download/v0.20.2/go-containerregistry_Linux_x86_64.tar.gz \
+            | tar -xz crane && sudo mv crane /usr/local/bin/
+      - name: Login GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Build the one-file layer
+        run: |
+          set -euo pipefail
+          DEST="${{ inputs.dest_path }}"
+          case "$DEST" in /*) echo "dest_path must not start with /"; exit 1;; esac
+          mkdir -p "$(dirname "$DEST")"
+          curl -fSL --retry 5 --retry-all-errors -C - -o "$DEST" "${{ inputs.file_url }}"
+          ls -la "$DEST"
+          GOT=$(sha256sum "$DEST" | cut -d' ' -f1)
+          echo "sha256=$GOT"
+          if [ -n "${{ inputs.sha256 }}" ] && [ "$GOT" != "${{ inputs.sha256 }}" ]; then
+            echo "sha256 mismatch: expected ${{ inputs.sha256 }}"; exit 1
+          fi
+          tar --owner=0 --group=0 -cf layer.tar "$DEST"
+          tar -tvf layer.tar
+      - name: Append
+        run: |
+          set -euo pipefail
+          TARGET="ghcr.io/${{ github.repository_owner }}/${{ inputs.image_repo }}:${{ inputs.tag }}"
+          crane append -b "${{ inputs.base }}" -f layer.tar -t "$TARGET"
+          echo "== appended -> $TARGET =="
+          crane manifest "$TARGET" | head -c 400
