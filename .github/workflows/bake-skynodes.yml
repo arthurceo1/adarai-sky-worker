@@ -1,0 +1,71 @@
+# Ship the CURRENT SkyNodes pack (custom_nodes/ComfyUI-SkyNodes) into the worker
+# images that are live, as ONE extra layer appended registry-side with crane.
+# No rebuild, no pull: the base's layers are reused by reference, only a few KB
+# of Python go up, and a host that already holds the base pulls just that layer.
+#
+# Why (24/09): SkyLoraDownload was committed on 06/08 (c774799, 71a280b) but never
+# shipped. The images the RunPod templates run (slim-oldbase-20260806 for the
+# faceswap endpoint, fat2-20260806 for the image endpoint) predate it, and the
+# Dockerfile.image full build is not a path anybody runs any more. So every
+# creator whose LoRA is not baked in (Lola, and every next talent) fails
+# Character Transfer with "success_no_images": ComfyUI cannot validate the
+# SaveImage branch that names a LoRA file the worker does not hold, silently
+# drops that branch, executes only the preview branches and returns no image.
+#
+# How to use: put "<base-tag> <new-tag>" lines in bake-skynodes/targets.txt and
+# push to main (or run it by hand). Then repoint the RunPod template(s) at the
+# new tag and flip app_settings.sky_lora_download_enabled in adarai (see
+# adarai docs/sky-lora-download-switch-2026-08-06.sql).
+name: bake-skynodes
+on:
+  push:
+    branches: [main]
+    paths:
+      - "SkyNodes/**"
+      - "bake-skynodes/**"
+      - ".github/workflows/bake-skynodes.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+jobs:
+  bake:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the pack compiles and registers SkyLoraDownload
+        run: |
+          set -euo pipefail
+          python3 -m py_compile SkyNodes/__init__.py SkyNodes/nodes/*.py
+          grep -q '"SkyLoraDownload": SkyLoraDownload' SkyNodes/__init__.py
+      - name: Build the layer (in-image path /comfyui/custom_nodes/ComfyUI-SkyNodes)
+        run: |
+          set -euo pipefail
+          mkdir -p stage/comfyui/custom_nodes
+          cp -R SkyNodes stage/comfyui/custom_nodes/ComfyUI-SkyNodes
+          find stage -name "__pycache__" -type d -prune -exec rm -rf {} +
+          tar --owner=0 --group=0 --numeric-owner -C stage -cf layer.tar comfyui
+          tar -tvf layer.tar
+      - name: Install crane
+        run: |
+          curl -fsSL https://github.com/google/go-containerregistry/releases/download/v0.20.2/go-containerregistry_Linux_x86_64.tar.gz \
+            | tar -xz crane && sudo mv crane /usr/local/bin/
+      - name: Login GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Append the layer to every target
+        run: |
+          set -euo pipefail
+          IMG="ghcr.io/${{ github.repository_owner }}/adarai-sky-image"
+          n=0
+          while read -r base new rest || [ -n "$base" ]; do
+            case "$base" in ""|\#*) continue;; esac
+            if [ -z "$new" ]; then echo "targets.txt: '$base' has no new tag"; exit 1; fi
+            if [ "$base" = "$new" ]; then echo "targets.txt: '$base' would overwrite the base tag itself, refusing"; exit 1; fi
+            before=$(crane manifest "$IMG:$base" | jq '.layers | length')
+            crane append -b "$IMG:$base" -f layer.tar -t "$IMG:$new"
+            after=$(crane manifest "$IMG:$new" | jq '.layers | length')
+            echo "== $IMG:$base ($before layers) -> $IMG:$new ($after layers)"
+            if [ "$after" != "$((before + 1))" ]; then echo "layer count did not grow by exactly one"; exit 1; fi
+            n=$((n + 1))
+          done < bake-skynodes/targets.txt
+          if [ "$n" -eq 0 ]; then echo "no target in bake-skynodes/targets.txt"; exit 1; fi

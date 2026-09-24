@@ -1,0 +1,5 @@
+# <base tag> <new tag>, both under ghcr.io/arthurceo1/adarai-sky-image. One per line.
+# slim = RunPod template bksm7zx24x (endpoint lmp0eg337fqsf4: faceswap, faceswap-headonly, faceswap-duo)
+# fat2 = RunPod template 6xynd5zxx1 (endpoint b425c26kib5i4p: image workflows, qwen-edit, amelia-zimage)
+slim-oldbase-20260806 slim-skynodes-20260924
+fat2-20260806 fat2-skynodes-20260924
